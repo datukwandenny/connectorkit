@@ -698,6 +698,41 @@ function SendTransaction() {
 
 ---
 
+## Off-Chain Message Signing
+
+Sign human-readable v1 off-chain messages ([sRFC 38](https://github.com/solana-foundation/SRFCs/discussions/3)) through wallets that support the `solana:signOffchainMessage` Wallet Standard feature. Unlike raw `signMessage`, off-chain messages carry a standard preamble so wallets can display them uniformly and signatures can never be confused with transaction signatures.
+
+The signed bytes returned by the wallet are recompiled with `@solana/kit`'s codec and checked byte-for-byte against the canonical encoding, and the resulting envelope's Ed25519 signature is always verified before the result is returned.
+
+```typescript
+'use client';
+
+import { useSignOffchainMessage } from '@solana/connector/react';
+
+function SignInButton() {
+    const { signOffchainMessage, canSignOffchainMessage, ready } = useSignOffchainMessage();
+
+    // `ready` is true once a wallet is connected; `canSignOffchainMessage`
+    // additionally requires the wallet to support v1 off-chain messages.
+    if (!ready || !canSignOffchainMessage) return null;
+
+    const handleSignIn = async () => {
+        const { signature, signedOffchainMessage, envelope } = await signOffchainMessage(
+            'Sign in to Example App',
+        );
+        // signature: Ed25519 signature over the full off-chain message bytes
+        // signedOffchainMessage: preamble + body bytes the wallet signed (send to your verifier)
+        // envelope: verified @solana/kit OffchainMessageEnvelope
+    };
+
+    return <button onClick={handleSignIn}>Sign In</button>;
+}
+```
+
+For non-React usage, `createOffchainMessageSigner({ wallet, account })` is available from `@solana/connector/headless`.
+
+---
+
 ## UI Elements
 
 ConnectorKit provides composable UI elements that handle data fetching and state management for you. Use the render prop pattern to customize the UI.
@@ -1437,12 +1472,13 @@ import { AppProvider, useConnector, useWallet, useConnectWallet } from '@solana/
 
 #### vNext Hooks (Recommended)
 
-| Hook                    | Description                 | Returns                                                           |
-| ----------------------- | --------------------------- | ----------------------------------------------------------------- |
-| `useWallet()`           | Wallet status state machine | `{ status, isConnected, isConnecting, account, accounts, error }` |
-| `useWalletConnectors()` | Available wallet connectors | `WalletConnectorMetadata[]`                                       |
-| `useConnectWallet()`    | Connect by connector ID     | `{ connect, isConnecting, error, resetError }`                    |
-| `useDisconnectWallet()` | Disconnect current wallet   | `{ disconnect, isDisconnecting }`                                 |
+| Hook                       | Description                         | Returns                                                                                     |
+| -------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `useWallet()`              | Wallet status state machine         | `{ status, isConnected, isConnecting, account, accounts, error }`                           |
+| `useWalletConnectors()`    | Available wallet connectors         | `WalletConnectorMetadata[]`                                                                 |
+| `useConnectWallet()`       | Connect by connector ID             | `{ connect, isConnecting, error, resetError }`                                              |
+| `useDisconnectWallet()`    | Disconnect current wallet           | `{ disconnect, isDisconnecting }`                                                           |
+| `useSignOffchainMessage()` | Off-chain message signing (sRFC 38) | `{ signOffchainMessage, canSignOffchainMessage, supportedMessageVersions, ready, address }` |
 
 #### Legacy Hooks
 
